@@ -1,0 +1,382 @@
+/* The Shape of a Point Cloud — full-screen edition.
+   Minimalist blues on paper; the widgets ARE the background, borderless,
+   with the text floating directly on top (no boxes — soft pools of the
+   paper colour only where legibility demands it). */
+
+:root {
+  --paper: #fcfcfd;
+  --ink: #1c2733;
+  --ink-soft: #57687c;
+  --ink-faint: #93a3b5;
+  --hair: #e2e9f2;
+  --h0: #2e7cd6;          /* components — cyan-leaning blue  */
+  --h1: #2b52b5;          /* loops — royal blue              */
+  --wash: #e9f1fa;        /* union-of-disks fill             */
+  --wash-tri: #d3e2f5;    /* filled triangles                */
+  --sweep: #2e7cd6;
+  --hi: #0f1b2d;          /* hover emphasis                  */
+  --serif: 'Charter', 'Bitstream Charter', 'Sitka Text', 'Iowan Old Style', Cambria, Georgia, serif;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+
+  --prose-left: clamp(1.2rem, 4vw, 4rem);
+  --prose-w: min(30rem, 40vw);
+  --bar-h: 3.4rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0b1526;
+    --ink: #dbe5f1;
+    --ink-soft: #9fb2c8;
+    --ink-faint: #64768c;
+    --hair: #1d2c44;
+    --h0: #4695d2;
+    --h1: #7161e6;
+    --wash: #11223b;
+    --wash-tri: #182c4e;
+    --sweep: #4695d2;
+    --hi: #f1f6fc;
+  }
+}
+:root[data-theme="light"] {
+  --paper: #fcfcfd; --ink: #1c2733; --ink-soft: #57687c; --ink-faint: #93a3b5;
+  --hair: #e2e9f2; --h0: #2e7cd6; --h1: #2b52b5; --wash: #e9f1fa;
+  --wash-tri: #d3e2f5; --sweep: #2e7cd6; --hi: #0f1b2d;
+}
+:root[data-theme="dark"] {
+  --paper: #0b1526; --ink: #dbe5f1; --ink-soft: #9fb2c8; --ink-faint: #64768c;
+  --hair: #1d2c44; --h0: #4695d2; --h1: #7161e6; --wash: #11223b;
+  --wash-tri: #182c4e; --sweep: #4695d2; --hi: #f1f6fc;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- the background canvas ---------- */
+
+#plane {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  touch-action: none;
+  z-index: 0;
+}
+body[data-scene="top"] #plane,
+body[data-scene="rips"] #plane,
+body[data-scene="chain"] #plane,
+body[data-scene="sandbox"] #plane { cursor: crosshair; }
+
+/* ---------- stage & dock (secondary canvases, borderless) ---------- */
+
+#stagewrap {
+  position: fixed;
+  top: 3.9rem;
+  bottom: var(--bar-h);
+  left: calc(var(--prose-left) + var(--prose-w) + 3vw);
+  right: 1.2vw;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+#stage { flex: 1 1 auto; min-height: 0; }
+#dock { flex: 0 0 auto; display: flex; flex-direction: column; }
+#dock canvas {
+  display: block;
+  width: 100%;
+  height: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+body[data-scene="merge"]   #dock-bars { height: min(190px, 26vh); }
+body[data-scene="loops"]   #dock-bars { height: min(150px, 22vh); }
+body[data-scene="noise"]   #dock-bars { height: min(250px, 32vh); }
+body[data-scene="stepper"] #dock-aux  { height: min(330px, 38vh); }
+body[data-scene="stepper"] #dock-bars { height: min(110px, 15vh); }
+body[data-scene="sandbox"] #dock-bars { height: min(260px, 32vh); }
+
+/* ---------- top bar ---------- */
+
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.95rem var(--prose-left) 1.5rem;
+  background: linear-gradient(var(--paper) 35%, transparent);
+  pointer-events: none;
+  font-family: var(--sans);
+}
+#topbar > * { pointer-events: auto; }
+#wordmark {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+}
+#wordmark:hover { color: var(--h0); }
+#now { flex: 1; font-size: 0.76rem; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#nav { display: flex; gap: 0.05rem; }
+.navnum {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.42rem;
+  font: 600 0.82rem/1 var(--sans);
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.navnum:hover { color: var(--h1); }
+.navnum.active { color: var(--h0); }
+#backshelf {
+  font-size: 0.76rem;
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+#backshelf:hover { color: var(--h0); }
+
+/* ---------- floating prose ---------- */
+
+#prose {
+  position: fixed;
+  z-index: 5;
+  top: 4rem;
+  bottom: calc(var(--bar-h) + 0.6rem);
+  left: var(--prose-left);
+  width: var(--prose-w);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.9rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
+}
+#prose > section { display: none; }
+#prose > section.active { display: block; animation: fadeup 0.45s ease; }
+@keyframes fadeup { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) {
+  #prose > section.active { animation: none; }
+}
+
+/* text floats straight on the drawing — a faint paper halo keeps it legible */
+#prose > section {
+  text-shadow:
+    0 0 10px var(--paper), 0 0 4px var(--paper),
+    1px 1px 6px var(--paper), -1px -1px 6px var(--paper);
+}
+
+#prose p { margin: 0 0 1.05em; }
+#prose a { color: var(--h0); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+#prose a:hover { color: var(--h1); }
+
+h1, h2 { font-weight: 500; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.4rem, 6.5vw, 4.2rem); line-height: 1.08; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; line-height: 1.25; margin-bottom: 0.85rem; }
+
+.eyebrow {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--h0);
+  margin: 0 0 0.8rem;
+}
+.aside {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  border-left: 2px solid var(--hair);
+  padding-left: 1rem;
+  margin: 1.3em 0;
+}
+.math { font-style: italic; }
+.centered { text-align: center; }
+
+/* ---------- hero & coda: centered pools ---------- */
+
+body[data-scene="top"] #prose,
+body[data-scene="coda"] #prose {
+  inset: 0;
+  width: auto;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 2rem 1rem;
+}
+.hero-pool {
+  /* not a box — a soft pool of the paper colour so type stays legible */
+  background: radial-gradient(closest-side, var(--paper) 45%, transparent 100%);
+  padding: 3.5rem clamp(1.5rem, 6vw, 5rem);
+  max-width: 44rem;
+}
+.hero-pool.center { text-align: center; }
+.hero-pool .sub {
+  margin-top: 1.1rem;
+  font-size: clamp(1.02rem, 2.1vw, 1.25rem);
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.hero-pool .note {
+  margin-top: 2rem;
+  font-family: var(--sans);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.hero-pool .hint {
+  margin-top: 1.4rem;
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  color: var(--ink-faint);
+}
+button.begin {
+  margin-top: 1.6rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--h0);
+  background: transparent;
+  border: 1px solid var(--h0);
+  border-radius: 3px;
+  padding: 0.6rem 1.4rem;
+  cursor: pointer;
+}
+button.begin:hover { color: var(--paper); background: var(--h0); }
+
+/* ---------- bottom controls bar ---------- */
+
+#ctlbar {
+  position: fixed;
+  z-index: 9;
+  left: 0; right: 0; bottom: 0;
+  min-height: var(--bar-h);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem var(--prose-left) 0.65rem;
+  background: linear-gradient(transparent, var(--paper) 60%);
+  pointer-events: none;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+}
+#ctlbar .ctl { display: none; }
+#ctlbar .ctl.active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  pointer-events: auto;
+}
+#ctlbar label { display: flex; align-items: center; gap: 0.5rem; }
+#ctlbar .ctl [role="group"] { display: inline-flex; gap: 0.35rem; }
+
+#scenenav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  pointer-events: auto;
+}
+#next-label { font-size: 0.74rem; color: var(--ink-faint); white-space: nowrap; }
+button.arrow {
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+button.arrow:hover:enabled { border-color: var(--h0); color: var(--h0); }
+button.arrow:disabled { opacity: 0.35; cursor: default; }
+
+button.chip {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  padding: 0.32rem 0.68rem;
+  cursor: pointer;
+}
+button.chip:hover { border-color: var(--h0); color: var(--h0); }
+button.chip.active { border-color: var(--h0); color: var(--h0); font-weight: 600; }
+button.chip:focus-visible,
+button.arrow:focus-visible,
+button.begin:focus-visible,
+.navnum:focus-visible,
+input[type="range"]:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--h0);
+  outline-offset: 2px;
+}
+
+input[type="range"] {
+  accent-color: var(--h0);
+  width: 10rem;
+  max-width: 34vw;
+}
+.readout {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  min-width: 6.5ch;
+}
+.counter { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-faint); }
+
+.statusline {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  min-height: 2.6em;
+  margin: 0 0 1.05em;
+}
+.statusline strong { color: var(--ink); font-weight: 600; }
+
+/* ---------- small screens: text on top, stage below ---------- */
+
+@media (max-width: 900px) {
+  :root { --bar-h: 4.4rem; }
+  #topbar { padding: 0.7rem 0.9rem 1.1rem; }
+  #now, #backshelf { display: none; }
+  #prose {
+    top: 3rem;
+    left: 0.9rem;
+    right: 0.9rem;
+    width: auto;
+    bottom: auto;
+    max-height: 32vh;
+  }
+  #stagewrap {
+    top: calc(3rem + 32vh + 0.6rem);
+    left: 0.6rem;
+    right: 0.6rem;
+  }
+  body[data-scene="top"] #prose,
+  body[data-scene="coda"] #prose { max-height: none; }
+  #next-label { display: none; }
+  #ctlbar { padding-inline: 0.9rem; }
+}

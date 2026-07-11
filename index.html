@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Shape of a Point Cloud — an interactive tour of persistent homology</title>
+<meta name="description" content="A full-screen interactive tour of persistent homology: grow disks around data points, watch components merge and loops form, read barcodes, and step through the matrix reduction that computes it all.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='34' fill='none' stroke='%232e7cd6' stroke-width='14'/></svg>">
+</head>
+<body data-scene="top">
+
+<canvas id="plane" aria-label="Interactive drawing area. Its contents change with each section of the tour."></canvas>
+
+<div id="stagewrap" aria-hidden="true">
+  <div id="stage"></div>
+  <div id="dock">
+    <canvas id="dock-aux" aria-hidden="false" aria-label="The boundary matrix, one column per simplex, reduced step by step."></canvas>
+    <canvas id="dock-bars" aria-hidden="false" aria-label="Barcode or persistence diagram for the current point cloud. Hover a bar to highlight its feature."></canvas>
+  </div>
+</div>
+
+<header id="topbar">
+  <a id="wordmark" href="#top">The Shape of a Point Cloud</a>
+  <span id="now" aria-live="polite"></span>
+  <nav id="nav" aria-label="Sections"></nav>
+  <a id="backshelf" href="https://library.brezgis.com" title="back to the shelf">Шара-бара</a>
+</header>
+
+<main id="prose">
+
+  <section data-scene="top">
+    <div class="hero-pool center">
+      <h1>The Shape of<br>a Point Cloud</h1>
+      <p class="sub">an interactive tour of persistent homology —<br>how a computer learns to see holes in data</p>
+      <p class="note">no topology required &middot; a little linear algebra helps</p>
+      <button class="begin" id="begin">begin the tour →</button>
+      <p class="hint">or skip ahead with the numbers above &middot; ← → keys work &middot; click to add drifting points</p>
+    </div>
+  </section>
+
+  <section data-scene="shape">
+    <p class="eyebrow">§ 1 · A cloud with a secret</p>
+    <h2>What shape is this data?</h2>
+    <p>Here are twenty-four measurements. Maybe they are two features of some cells, or the readings of two sensors. Your eye needs about a tenth of a second to announce the important thing about them: <em>these points sit on a loop.</em></p>
+    <p>Now try asking statistics — the buttons are below.</p>
+    <p>The average lands in the one place where there is <em>no</em> data — it sits in the hole it cannot see. The trend line shrugs; there is no trend. Means, variances, and regressions summarize <em>where</em> the data is. None of them can say the sentence “there is a hole in the middle.”</p>
+    <p>That sentence is a statement about <em>shape</em>, and the branch of math that makes it precise is topology. Persistent homology is topology turned into something you can run on a matrix — which means you, knowing linear algebra, already own most of the machinery. The rest of this tour builds it in front of you.</p>
+    <p>Why expect data to have a shape at all? Because measurements are usually many, but the dials behind them are few. A face photographed under a turning light is a million pixels, yet only one angle truly varies — so those million-dimensional points sweep out a one-dimensional curve. This is the <em>manifold hypothesis</em>: high-dimensional data tends to lie near a low-dimensional shape, because the process that generated it had only a few degrees of freedom. Anything periodic — an angle, a phase, a cycle in a chemical oscillator — traces a loop. Shapes are not a curiosity in data; they are what generating processes look like from the outside.</p>
+    <p class="aside">Everything here happens in two dimensions so that you can watch it. Nothing in the mathematics will care: the algorithm we build only ever reads <em>pairwise distances</em> between points, and points in ℝ<sup>1000</sup> have those too.</p>
+  </section>
+
+  <section data-scene="grow">
+    <p class="eyebrow">§ 2 · Inflate everything</p>
+    <h2>A point has no shape. Give it some.</h2>
+    <p>A finite set of points is topologically boring — it is just dust. The classic trick: grow a disk of radius <span class="math">r</span> around every point, and study the union of disks instead. Drag the slider at the bottom.</p>
+    <p>Small <span class="math">r</span>: dust. Large <span class="math">r</span>: one featureless blob. Somewhere in between, the union of disks briefly <em>becomes the shape your eye saw</em> — a ring with a hole in it.</p>
+    <p>So which radius is the right one? Here is the idea that makes the whole subject work: <strong>refuse to choose.</strong> Sweep <span class="math">r</span> from zero to huge, and keep a diary of every topological event along the way — the moment each feature appears, and the moment it disappears. Features that survive a long stretch of the sweep are real; features that flicker in and out are noise.</p>
+    <p>That diary is called a <em>barcode</em>. Let’s record one.</p>
+  </section>
+
+  <section data-scene="merge">
+    <p class="eyebrow">§ 3 · Births and deaths</p>
+    <h2>Chapter one: islands merging</h2>
+    <p>The simplest kind of feature is a <em>connected piece</em>. At <span class="math">r</span> = 0 every point is its own island — that is a birth, all at once, for every point. As the disks grow, islands touch and merge. Each merge ends one island’s independent story: a death. Draw each lifespan as a horizontal bar and you get the barcode of <span class="math">H</span><sub>0</sub> (“H-zero” — the counter of connected pieces), lower right.</p>
+    <p>The vertical line sweeps with the slider: bars to its left-and-under are alive right now. <strong>Hover a bar</strong> to light up the island whose life it records.</p>
+    <p>Two things to notice. The short bars die young — they are points that quickly joined a neighbor; that is the texture of noise. The two long bars are the two genuine clusters, and they stay separate until the disks are large enough to bridge the gap between clusters. And one bar never dies: at the end everything is a single blob, and that last component lives forever. Its bar runs off the edge of the chart.</p>
+  </section>
+
+  <section data-scene="loops">
+    <p class="eyebrow">§ 4 · Loops</p>
+    <h2>Chapter two: holes</h2>
+    <p>Components merge; that story only ever loses characters. The more interesting characters <em>appear</em> along the way: loops. A loop is <em>born</em> at the radius where a ring of disks first closes, and it <em>dies</em> at the radius where its middle fills in. Its bar lives in the barcode of <span class="math">H</span><sub>1</sub>, the counter of holes.</p>
+    <p><strong>Hover the long bar</strong> and the loop itself lights up in the cloud — that bar <em>is</em> that hole, drawn as a lifespan. Switch to the figure eight: two holes, two long bars. Switch to random scatter: little loops flicker into existence by accident and are filled almost immediately — all short bars, no story.</p>
+    <p>This is the entire reading lesson: <strong>long bars are features of the data; short bars are accidents of the sampling.</strong></p>
+  </section>
+
+  <section data-scene="noise">
+    <p class="eyebrow">§ 5 · Trust</p>
+    <h2>Why you may believe a barcode</h2>
+    <p>A summary you cannot trust under noise is a horoscope. So: shake the data and watch what the barcode does.</p>
+    <p>The rubble at the bottom churns with every shake — but the long <span class="math">H</span><sub>1</sub> bar barely trembles. This robustness is not luck; it is a theorem (the <em>stability theorem</em>): perturb the points a little, and no bar’s endpoints move by more than a little. Statistics from topology come with a warranty.</p>
+    <p>The <strong>diagram</strong> view is the same information drawn differently: each bar becomes one dot, at (birth, death). Everything sits above the diagonal — you cannot die before you are born — and <em>distance above the diagonal is lifespan</em>. Noise hugs the diagonal; features float high above it. Topologists keep both pictures; the diagram scales better when there are thousands of bars.</p>
+    <p class="aside">Circles for <span class="math">H</span><sub>0</sub>, triangles for <span class="math">H</span><sub>1</sub> — the shapes, not just the colors, tell the two families apart.</p>
+  </section>
+
+  <section data-scene="rips">
+    <p class="eyebrow">§ 6 · Discretize</p>
+    <h2>Triangles, not disks</h2>
+    <p>A computer cannot push disks around the plane; it needs the picture rebuilt from finitely many parts. The recipe, called the <em>Vietoris–Rips complex</em>, is one sentence long: <strong>connect two points with an edge when their disks overlap; fill in a triangle when all three of its edges are present.</strong> Drag the points and watch the rule fire.</p>
+    <p>Points, edges, triangles (and in higher dimensions, their big siblings) are called <em>simplices</em>, and a pile of them glued compatibly is a <em>simplicial complex</em>. The growing family of complexes you get by sweeping <span class="math">r</span> — each one containing the last — is a <em>filtration</em>. That is the object persistent homology actually eats.</p>
+    <p class="aside">Fine print: the true union-of-disks picture is a slightly different complex (the Čech complex, which asks for a common overlap of all three disks). Rips is its cheaper cousin — it only ever looks at pairwise distances — and for intuition the two rhyme. Every software package you will meet computes Rips.</p>
+    <p>Pause on what just quietly happened: the recipe never mentioned the plane. It asks one question — <em>how far apart is this pair of points?</em> — and builds everything from the answers. Hand it distances between gene-expression profiles, between frames of a video, between configurations of a protein, and it builds the same complexes and, soon, the same barcodes. This is how the manifold hypothesis becomes testable: if your thousand-dimensional data really does live on a loop, the loop will show up as a long bar — no plot required, no projection to 2-D, no luck.</p>
+  </section>
+
+  <section data-scene="chain">
+    <p class="eyebrow">§ 7 · Where the linear algebra lives</p>
+    <h2>How a matrix notices a hole</h2>
+    <p>Here is the one genuinely clever move in homology, and it is a move you already know. Work over <span class="math">ℤ/2</span> — the arithmetic where 1 + 1 = 0. Then a <em>set of edges</em> is the same thing as a <em>vector</em>: one coordinate per edge, a 1 where the edge is in the set. Sets of edges become vectors; “combine two sets” becomes addition; and every question becomes linear algebra.</p>
+    <p>Define one linear map, the <em>boundary</em> <span class="math">∂</span>: it sends each edge to its pair of endpoint vertices. Because 1 + 1 = 0, when you take the boundary of a <em>path</em>, all the interior vertices cancel in pairs, and only the two ends survive. <strong>Click edges to build a chain and watch its boundary.</strong></p>
+    <div class="statusline" id="chain-status">∂c = 0 — select some edges.</div>
+    <p>Try to build a nonzero chain whose boundary is zero. You will discover — with your hands — that the only way to make every endpoint cancel is to <em>close the path into a loop</em>. Chains with <span class="math">∂c</span> = 0 are called <em>cycles</em>, and you have just found that <strong>cycles = the null space of the boundary matrix</strong>. A hole-detector, hiding in a kernel.</p>
+    <p>One repair is needed. Select the three edges around the shaded triangle: a cycle — but it encircles nothing; the triangle is filled. Filled-in cycles are exactly the boundaries of triangle-chains, i.e. the <em>column space of the next boundary map</em> <span class="math">∂</span><sub>2</sub>. Those should count for nothing. So we declare two cycles equivalent when they differ by boundaries, and define</p>
+    <p class="centered math">H<sub>1</sub> = null(∂<sub>1</sub>) / im(∂<sub>2</sub>) — cycles, modulo filled-in cycles.</p>
+    <p>The dimension of that quotient counts independent holes (it’s called a <em>Betti number</em>). By rank–nullity you can already compute it: β<sub>1</sub> = (#edges − rank ∂<sub>1</sub>) − rank ∂<sub>2</sub>. Two ranks. That is all homology is.</p>
+    <p class="aside">In textbooks this construction runs through group theory — chains form abelian groups and <span class="math">H</span><sub>1</sub> is a quotient group. Over <span class="math">ℤ/2</span> the groups happen to be vector spaces, so every tool you own applies. You are not getting a watered-down version; ℤ/2 is what actual software uses.</p>
+  </section>
+
+  <section data-scene="stepper">
+    <p class="eyebrow">§ 8 · The algorithm</p>
+    <h2>The whole subject is one matrix reduction</h2>
+    <p>Now put the sweep (§2) and the algebra (§7) together. List <em>every</em> simplex of the filtration — vertices, edges, triangles — in order of arrival, and build one big boundary matrix <span class="math">D</span>: column <span class="math">j</span> holds the boundary of the <span class="math">j</span>-th simplex. Then reduce it left to right, like Gaussian elimination with one house rule: <strong>you may only add columns from the past</strong> (and you keep going until each column’s lowest 1 is in a row no earlier column claims).</p>
+    <p>Each column ends one of two ways, and both ways mean something:</p>
+    <p>— the column becomes <strong>zero</strong>: this simplex closed a cycle. <em>A feature is born.</em><br>
+    — the column keeps a <strong>lowest 1</strong> in row <span class="math">i</span>: this simplex fills the cycle that simplex <span class="math">i</span> created. <em>The feature born at i dies now.</em> Pair them; that pair is a bar.</p>
+    <p>Four points, fourteen simplices. Step through it with the buttons below.</p>
+    <div class="statusline" id="step-status">Press <strong>step</strong> to process the first column.</div>
+    <p class="aside">Watch for three moments. When the fourth side of the square arrives, its column reduces to zero — the loop is born. When the first triangle arrives, it dies <em>in the same instant</em> its diagonal creates a smaller loop: a bar of length zero, which the barcode silently drops. And when the second triangle arrives, the visible loop dies — the one bar you saw in §4 falls out of arithmetic. The very last column also reduces to zero: a class in <span class="math">H</span><sub>2</sub>, the next floor of the theory. Same matrix, same rules, no new ideas.</p>
+    <p>That is persistent homology, all of it: <em>order simplices by arrival, reduce one boundary matrix, read the pairs.</em> Everything you hovered over earlier in this tour was computed exactly this way, live, in your browser.</p>
+  </section>
+
+  <section data-scene="sandbox">
+    <p class="eyebrow">§ 9 · Your turn</p>
+    <h2>The sandbox</h2>
+    <p>Click anywhere out there to place points (click a point to remove it). Everything recomputes as you draw: the complex, both barcodes, the diagram. Draw two rings and check for two long <span class="math">H</span><sub>1</sub> bars. Draw a line of points and watch <span class="math">H</span><sub>1</sub> stay silent. Try to draw the letter B.</p>
+    <p class="aside">Hover any bar or diagram point to see its feature in the plane. H<sub>0</sub> in the lighter blue, H<sub>1</sub> in the darker.</p>
+  </section>
+
+  <section data-scene="coda">
+    <div class="hero-pool">
+      <p class="eyebrow">Coda</p>
+      <p>Why does anyone do this? Because “how many components, and how many holes, at which scales” turns out to be a genuinely useful summary of real data: the branching of blood vessels, pores in a material, the cosmic web, protein structures, the activity of neural populations. Persistent homology is the rare exported good of pure mathematics — a quotient of a null space, shipped to a biology lab, with a stability theorem for a warranty.</p>
+      <p>To go further: Robert Ghrist’s essay <a href="https://www2.math.upenn.edu/~ghrist/preprints/barcodes.pdf">Barcodes: the persistent topology of data</a> is the classic next step; Edelsbrunner &amp; Harer’s <em>Computational Topology</em> is the standard textbook; and <a href="https://github.com/Ripser/ripser">Ripser</a> is what the professionals use to reduce those matrices very, very fast. For the tools I use to point this at language-model internals, see <a href="https://brezgis.com/blog/what-is-persistent-homology.html">the blog-post version</a> of this tour.</p>
+      <p>Every barcode here was computed in your browser by a few hundred lines of vanilla JavaScript doing ℤ/2 column reduction — the same algorithm you stepped through in §8, just with no one watching.</p>
+      <p class="counter">made with pure-math joy · <a href="https://github.com/brezgis/ph-explainer">source</a> · <a href="https://library.brezgis.com">back to the shelf</a></p>
+    </div>
+  </section>
+
+</main>
+
+<footer id="ctlbar">
+
+  <div class="ctl" data-scene="shape">
+    <span role="group" aria-label="Summaries to overlay">
+      <button class="chip" data-overlay="mean">the average</button>
+      <button class="chip" data-overlay="trend">the trend line</button>
+      <button class="chip" data-overlay="eye">what your eye sees</button>
+    </span>
+  </div>
+
+  <div class="ctl" data-scene="grow">
+    <label>radius <span class="math">r</span>
+      <input type="range" id="grow-r" min="0" max="0.30" step="0.001" value="0.02">
+    </label>
+    <span class="readout" id="grow-read">r = 0.02</span>
+  </div>
+
+  <div class="ctl" data-scene="merge">
+    <label>radius <span class="math">r</span>
+      <input type="range" id="merge-r" min="0" max="0.32" step="0.001" value="0.015">
+    </label>
+    <span class="readout" id="merge-read">r = 0.015</span>
+    <span class="counter">hover a bar ↘</span>
+  </div>
+
+  <div class="ctl" data-scene="loops">
+    <span role="group" aria-label="Choose a point cloud">
+      <button class="chip active" data-shape="ring">one ring</button>
+      <button class="chip" data-shape="eight">figure eight</button>
+      <button class="chip" data-shape="random">random scatter</button>
+    </span>
+    <label>radius <span class="math">r</span>
+      <input type="range" id="loops-r" min="0" max="0.30" step="0.001" value="0.06">
+    </label>
+    <span class="readout" id="loops-read">r = 0.06</span>
+  </div>
+
+  <div class="ctl" data-scene="noise">
+    <label>noise
+      <input type="range" id="noise-amt" min="0" max="0.055" step="0.001" value="0.012">
+    </label>
+    <button class="chip" id="noise-shuffle">shake again</button>
+    <span role="group" aria-label="View">
+      <button class="chip active" data-view="bars">barcode</button>
+      <button class="chip" data-view="diagram">diagram</button>
+    </span>
+  </div>
+
+  <div class="ctl" data-scene="rips">
+    <label>radius <span class="math">r</span>
+      <input type="range" id="rips-r" min="0.04" max="0.26" step="0.001" value="0.13">
+    </label>
+    <span class="counter">drag the points</span>
+  </div>
+
+  <div class="ctl" data-scene="chain">
+    <button class="chip" id="chain-clear">clear</button>
+    <span class="counter">click edges to toggle them</span>
+  </div>
+
+  <div class="ctl" data-scene="stepper">
+    <button class="chip" id="step-back">← back</button>
+    <button class="chip" id="step-next">step →</button>
+    <button class="chip" id="step-play">play</button>
+    <button class="chip" id="step-reset">reset</button>
+  </div>
+
+  <div class="ctl" data-scene="sandbox">
+    <span role="group" aria-label="Presets">
+      <button class="chip" data-preset="ring">ring</button>
+      <button class="chip" data-preset="eight">two rings</button>
+      <button class="chip" data-preset="clusters">clusters</button>
+      <button class="chip" data-preset="random">random</button>
+      <button class="chip" data-preset="clear">clear</button>
+    </span>
+    <label>radius <span class="math">r</span>
+      <input type="range" id="sand-r" min="0" max="0.30" step="0.001" value="0.05">
+    </label>
+    <span class="readout" id="sand-read">r = 0.05</span>
+    <span class="counter" id="sand-count">0 / 60 points</span>
+    <span role="group" aria-label="View">
+      <button class="chip active" data-view="bars">barcodes</button>
+      <button class="chip" data-view="diagram">diagram</button>
+    </span>
+  </div>
+
+  <div id="scenenav">
+    <span id="next-label" aria-hidden="true"></span>
+    <button class="arrow" id="prev" aria-label="Previous section">←</button>
+    <button class="arrow" id="next" aria-label="Next section">→</button>
+  </div>
+
+</footer>
+
+<script src="js/engine.js"></script>
+<script src="js/viz.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
