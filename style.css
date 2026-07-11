@@ -218,12 +218,15 @@ body[data-scene="coda"] #prose {
   place-items: center;
   overflow-y: auto;
   padding: 2rem 1rem;
+  /* let clicks fall through to the canvas — the point cloud is clickable */
+  pointer-events: none;
 }
 .hero-pool {
   /* not a box — a soft pool of the paper colour so type stays legible */
   background: radial-gradient(closest-side, var(--paper) 45%, transparent 100%);
   padding: 3.5rem clamp(1.5rem, 6vw, 5rem);
   max-width: 44rem;
+  pointer-events: auto;
 }
 .hero-pool.center { text-align: center; }
 .hero-pool .sub {
