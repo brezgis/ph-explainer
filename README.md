@@ -7,8 +7,21 @@ the text floating on top. Pure vanilla HTML/CSS/JS, no build step, no
 dependencies; every barcode is computed in the browser by a ℤ/2
 boundary-matrix reduction.
 
+![The title screen: a drifting point cloud, disks quietly merging behind the title](docs/screenshot.png)
+
 Navigate with the numbered shortcuts in the top bar, the arrows at the bottom
 right, or the ← → keys. Sections deep-link: `#merge`, `#sandbox`, ….
+
+## Quickstart
+
+There is nothing to build or install — serve the directory with any static
+file server:
+
+```
+python3 -m http.server
+```
+
+then open `http://localhost:8000`.
 
 ## Tour
 
@@ -38,4 +51,6 @@ Radii convention: the engine works in Rips scale ε (edge appears when
 There is also a blog-post edition with a subset of the widgets embedded in
 prose: [What is Persistent Homology?](https://brezgis.com/blog/what-is-persistent-homology.html)
 
-To serve locally: `python3 -m http.server` and open `http://localhost:8000`.
+## License
+
+MIT — see [LICENSE](LICENSE).
